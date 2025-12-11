@@ -2,8 +2,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
+# Install dependencies for better-sqlite3 and curl for healthcheck
+RUN apk add --no-cache python3 make g++ curl
 
 # Copy package files
 COPY package*.json ./
@@ -25,8 +25,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies for better-sqlite3
-RUN apk add --no-cache python3 make g++
+# Install dependencies for better-sqlite3 and curl for healthcheck
+RUN apk add --no-cache python3 make g++ curl
 
 # Copy package files
 COPY package*.json ./
@@ -38,6 +38,8 @@ RUN npm ci --only=production
 COPY --from=builder /app/app.js ./
 COPY --from=builder /app/src/ ./src/
 COPY --from=builder /app/dashboard/dist/ ./dashboard/dist/
+COPY --from=builder /app/dashboard/node_modules/ ./dashboard/node_modules/
+COPY --from=builder /app/dashboard/package*.json ./dashboard/
 
 # Create directories for persistent data
 RUN mkdir -p /app/session /app/data /app/media
@@ -47,7 +49,7 @@ EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3001/api/v1/health || exit 1
+  CMD curl -f http://127.0.0.1:3001/api/v1/health || exit 1
 
 # Start application
 CMD ["node", "app.js"]
