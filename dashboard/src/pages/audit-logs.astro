@@ -1,0 +1,96 @@
+---
+import Base from '../layouts/Base.astro';
+import { db, getIsConnected } from '../lib/server';
+
+const isConnected = getIsConnected();
+
+const page = parseInt(Astro.url.searchParams.get('page') || '1');
+const limit = 50;
+const offset = (page - 1) * limit;
+
+// Get total count
+const totalResult = db.prepare("SELECT COUNT(*) as total FROM audit_logs").get();
+const total = totalResult?.total || 0;
+const totalPages = Math.ceil(total / limit);
+
+// Get logs
+const logs = db.prepare("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT ? OFFSET ?").all(limit, offset);
+
+const formatDate = (timestamp: string) => new Date(timestamp).toLocaleString();
+---
+
+<Base title="Audit Logs" connected={isConnected}>
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-semibold dark:text-white">Audit Logs</h2>
+      <a href="/settings" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+        Back to Settings
+      </a>
+    </div>
+
+    {logs.length === 0 ? (
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center text-gray-500 dark:text-gray-400">
+        No audit logs found
+      </div>
+    ) : (
+      <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Showing {logs.length} of {total} entries
+        </p>
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <th class="text-left py-3 px-4 font-semibold text-gray-600 dark:text-gray-400">Time</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-600 dark:text-gray-400">Action</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-600 dark:text-gray-400">Details</th>
+                <th class="text-left py-3 px-4 font-semibold text-gray-600 dark:text-gray-400">IP</th>
+              </tr>
+            </thead>
+            <tbody class="dark:text-gray-300">
+              {logs.map((log: any) => (
+                <tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900">
+                  <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {formatDate(log.created_at)}
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs font-medium">
+                      {log.action}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 font-mono text-xs max-w-xs truncate">
+                    {log.details || '-'}
+                  </td>
+                  <td class="py-3 px-4 text-xs text-gray-500 dark:text-gray-400">
+                    {log.ip_address || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {totalPages > 1 && (
+          <div class="flex justify-center items-center gap-4 mt-6">
+            <a
+              href={page > 1 ? `/audit-logs?page=${page - 1}` : '#'}
+              class={`px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium ${page === 1 ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              Previous
+            </a>
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+              Page {page} of {totalPages}
+            </span>
+            <a
+              href={page < totalPages ? `/audit-logs?page=${page + 1}` : '#'}
+              class={`px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium ${page >= totalPages ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              Next
+            </a>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+</Base>

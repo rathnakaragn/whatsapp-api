@@ -1,0 +1,85 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getIsConnected } from '../../lib/server';
+
+const isConnected = getIsConnected();
+
+const AVAILABLE_EVENTS = [
+  { value: 'message.received', label: 'Message Received' },
+  { value: 'message.sent', label: 'Message Sent' },
+  { value: 'connection.connected', label: 'Connection Established' },
+  { value: 'connection.disconnected', label: 'Connection Lost' },
+];
+---
+
+<Base title="New Webhook" connected={isConnected}>
+  <div>
+    <h2 class="text-2xl font-semibold mb-6 dark:text-white">New Webhook</h2>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <form method="POST" action="/actions/webhook-create">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Endpoint URL
+          </label>
+          <input
+            type="url"
+            name="url"
+            placeholder="https://your-server.com/webhook"
+            required
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          />
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Events
+          </label>
+          <div class="flex flex-wrap gap-4">
+            {AVAILABLE_EVENTS.map((event) => (
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="events"
+                  value={event.value}
+                  class="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500"
+                />
+                <span class="text-sm dark:text-gray-300">{event.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Secret (optional)
+          </label>
+          <input
+            type="text"
+            name="secret"
+            placeholder="Used to sign webhook payloads"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          />
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            If provided, payloads will be signed with HMAC-SHA256
+          </p>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+          <a
+            href="/webhooks"
+            class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            Cancel
+          </a>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Create
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</Base>

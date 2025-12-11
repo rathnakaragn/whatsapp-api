@@ -1,0 +1,210 @@
+---
+import Base from '../layouts/Base.astro';
+import { db, getIsConnected } from '../lib/server';
+
+// Get connection state
+const isConnected = getIsConnected();
+
+// Get query params
+const url = Astro.url;
+const filter = url.searchParams.get('filter') || 'all';
+const search = url.searchParams.get('search') || '';
+const page = parseInt(url.searchParams.get('page') || '1');
+const limit = 50;
+
+// Handle toast messages from redirects
+const toast = url.searchParams.get('toast');
+const toastType = url.searchParams.get('type') || 'success';
+
+// Build query
+let query = "SELECT * FROM messages WHERE direction = 'incoming'";
+const params: any[] = [];
+
+if (filter && filter !== 'all') {
+  query += " AND reply_status = ?";
+  params.push(filter);
+}
+
+if (search) {
+  query += " AND message LIKE ?";
+  params.push(`%${search}%`);
+}
+
+// Get total count
+const countQuery = query.replace("SELECT *", "SELECT COUNT(*) as total");
+const totalResult = db.prepare(countQuery).get(...params);
+const total = totalResult?.total || 0;
+const totalPages = Math.ceil(total / limit);
+
+// Add pagination
+query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+params.push(limit, (page - 1) * limit);
+
+const messages = db.prepare(query).all(...params);
+
+const formatPhone = (jid: string) => jid.replace('@s.whatsapp.net', '').replace('@g.us', ' (group)');
+const formatDate = (timestamp: string) => new Date(timestamp).toLocaleString();
+
+const statusColors: Record<string, string> = {
+  unread: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  read: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+  replied: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+  ignored: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+};
+
+const filters = ['all', 'unread', 'read', 'replied', 'ignored'];
+---
+
+<Base title="Inbox" connected={isConnected}>
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-semibold dark:text-white">Inbox</h2>
+      <a href="/" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+        Refresh
+      </a>
+    </div>
+
+    <!-- Search form -->
+    <form method="GET" class="flex gap-2 mb-4">
+      <input type="hidden" name="filter" value={filter} />
+      <input
+        type="text"
+        name="search"
+        placeholder="Search messages..."
+        value={search}
+        class="flex-1 px-3 py-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-800 focus:outline-none focus:border-green-500 text-sm"
+      />
+      <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm font-medium">
+        Search
+      </button>
+      {search && (
+        <a href={`/?filter=${filter}`} class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+          Clear
+        </a>
+      )}
+    </form>
+
+    <!-- Filter tabs -->
+    <div class="flex gap-2 mb-6 flex-wrap">
+      {filters.map(f => (
+        <a
+          href={`/?filter=${f}${search ? `&search=${search}` : ''}`}
+          class={`px-4 py-2 rounded-full text-sm capitalize transition-colors ${
+            filter === f
+              ? 'bg-green-500 text-white'
+              : 'bg-white dark:bg-gray-800 border dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          {f === 'all' ? 'All' : f}
+        </a>
+      ))}
+    </div>
+
+    <!-- Messages -->
+    {messages.length === 0 ? (
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center text-gray-500 dark:text-gray-400">
+        No messages found
+      </div>
+    ) : (
+      <div>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Showing {messages.length} of {total} messages
+        </p>
+
+        <div class="space-y-4">
+          {messages.map((msg: any) => (
+            <div
+              class={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 transition-all ${
+                msg.reply_status === 'unread' ? 'border-l-4 border-green-500' : ''
+              }`}
+            >
+              <div class="flex justify-between items-start mb-3">
+                <span class="font-semibold dark:text-white">{formatPhone(msg.phone)}</span>
+                <div class="flex items-center gap-3">
+                  <span class={`px-2 py-1 rounded text-xs font-medium uppercase ${statusColors[msg.reply_status]}`}>
+                    {msg.reply_status}
+                  </span>
+                  {msg.media_type && (
+                    <span class="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 rounded text-xs uppercase">
+                      {msg.media_type}
+                    </span>
+                  )}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{formatDate(msg.created_at)}</span>
+                </div>
+              </div>
+
+              <div class="p-4 bg-gray-100 dark:bg-gray-900 rounded-lg mb-4">
+                {msg.media_url && msg.media_type === 'image' && (
+                  <img src={msg.media_url} alt="Media" class="max-w-full max-h-72 rounded mb-3" />
+                )}
+                {msg.media_url && msg.media_type === 'video' && (
+                  <video src={msg.media_url} controls class="max-w-full max-h-72 rounded mb-3" />
+                )}
+                <p class="whitespace-pre-wrap break-words dark:text-gray-200">{msg.message}</p>
+              </div>
+
+              <div class="flex gap-2 flex-wrap">
+                {msg.reply_status === 'unread' && (
+                  <form method="POST" action="/actions/status">
+                    <input type="hidden" name="id" value={msg.id} />
+                    <input type="hidden" name="status" value="read" />
+                    <input type="hidden" name="redirect" value={`/?filter=${filter}${search ? `&search=${search}` : ''}&page=${page}`} />
+                    <button type="submit" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+                      Mark Read
+                    </button>
+                  </form>
+                )}
+                {msg.reply_status !== 'replied' && msg.reply_status !== 'ignored' && (
+                  <>
+                    <a href={`/reply/${msg.id}?redirect=/?filter=${filter}${search ? `&search=${search}` : ''}&page=${page}`} class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm font-medium">
+                      Reply
+                    </a>
+                    <form method="POST" action="/actions/status">
+                      <input type="hidden" name="id" value={msg.id} />
+                      <input type="hidden" name="status" value="ignored" />
+                      <input type="hidden" name="redirect" value={`/?filter=${filter}${search ? `&search=${search}` : ''}&page=${page}`} />
+                      <button type="submit" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium">
+                        Ignore
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Pagination -->
+    {totalPages > 1 && (
+      <div class="flex justify-center items-center gap-4 mt-6">
+        <a
+          href={page > 1 ? `/?filter=${filter}${search ? `&search=${search}` : ''}&page=${page - 1}` : '#'}
+          class={`px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium ${page === 1 ? 'opacity-50 pointer-events-none' : ''}`}
+        >
+          Previous
+        </a>
+        <span class="text-sm text-gray-500 dark:text-gray-400">
+          Page {page} of {totalPages}
+        </span>
+        <a
+          href={page < totalPages ? `/?filter=${filter}${search ? `&search=${search}` : ''}&page=${page + 1}` : '#'}
+          class={`px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium ${page >= totalPages ? 'opacity-50 pointer-events-none' : ''}`}
+        >
+          Next
+        </a>
+      </div>
+    )}
+
+    <!-- Toast notification -->
+    {toast && (
+      <div class={`fixed bottom-8 right-8 px-6 py-4 rounded-lg text-white font-medium z-50 ${
+        toastType === 'error' ? 'bg-red-500' : 'bg-green-500'
+      }`}>
+        {toast}
+      </div>
+    )}
+  </div>
+</Base>

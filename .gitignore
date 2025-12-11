@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains secrets!)
+.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Session data (contains auth tokens!)
+session/
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db

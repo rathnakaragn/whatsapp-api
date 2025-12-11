@@ -1,0 +1,177 @@
+---
+import Base from '../layouts/Base.astro';
+import { db, getIsConnected } from '../lib/server';
+
+const isConnected = getIsConnected();
+
+// Get API key from database
+const keyRow = db.prepare("SELECT key FROM api_keys ORDER BY id DESC LIMIT 1").get();
+const apiKey = keyRow?.key || '';
+
+const apiBaseUrl = `${Astro.url.origin}/api/v1`;
+
+// Handle toast from redirect
+const toast = Astro.url.searchParams.get('toast');
+const toastType = Astro.url.searchParams.get('type') || 'success';
+---
+
+<Base title="Settings" connected={isConnected}>
+  <div>
+    <h2 class="text-2xl font-semibold mb-6 dark:text-white">API Settings</h2>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-2 dark:text-white">API Key</h3>
+      <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        Use this key to authenticate API requests for automation.
+      </p>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          id="apiKey"
+          value={apiKey}
+          readonly
+          class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-sm bg-gray-50 dark:bg-gray-700 dark:text-white"
+        />
+        <button
+          id="copyBtn"
+          class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        >
+          Copy
+        </button>
+      </div>
+      <div class="flex items-center gap-4 mt-4">
+        <form method="POST" action="/actions/regenerate-key">
+          <button
+            type="submit"
+            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            onclick="return confirm('Are you sure? This will revoke the current API key. Any integrations using the old key will stop working.')"
+          >
+            Regenerate Key
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-2 dark:text-white">API Base URL</h3>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          id="baseUrl"
+          value={apiBaseUrl}
+          readonly
+          class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg font-mono text-sm bg-gray-50 dark:bg-gray-700 dark:text-white"
+        />
+        <button
+          id="copyUrlBtn"
+          class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        >
+          Copy
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">API Endpoints</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 dark:border-gray-700">
+              <th class="text-left py-3 px-2 font-semibold text-gray-600 dark:text-gray-400">Method</th>
+              <th class="text-left py-3 px-2 font-semibold text-gray-600 dark:text-gray-400">Endpoint</th>
+              <th class="text-left py-3 px-2 font-semibold text-gray-600 dark:text-gray-400">Description</th>
+            </tr>
+          </thead>
+          <tbody class="dark:text-gray-300">
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs font-semibold">GET</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/health</td>
+              <td class="py-3 px-2">Health check (no auth)</td>
+            </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs font-semibold">GET</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/status</td>
+              <td class="py-3 px-2">Connection status</td>
+            </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs font-semibold">GET</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/inbox</td>
+              <td class="py-3 px-2">Get unread messages</td>
+            </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs font-semibold">GET</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/inbox/all</td>
+              <td class="py-3 px-2">Get all messages</td>
+            </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs font-semibold">POST</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/messages/:id/reply</td>
+              <td class="py-3 px-2">Reply to a message</td>
+            </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs font-semibold">PATCH</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/messages/:id/status</td>
+              <td class="py-3 px-2">Update message status</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">Example Usage</h3>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-4 mb-2">Get unread messages</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -H "X-API-Key: {apiKey}" \
+  {apiBaseUrl}/inbox</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">Reply to a message</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -X POST \
+  -H "X-API-Key: {apiKey}" \
+  -H "Content-Type: application/json" \
+  -d '{`{"message": "Hello!"}`}' \
+  {apiBaseUrl}/messages/MESSAGE_ID/reply</pre>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <h3 class="text-lg font-semibold mb-4 dark:text-white">Administration</h3>
+      <a
+        href="/audit-logs"
+        class="block p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+      >
+        <span class="font-semibold dark:text-white block mb-1">Audit Logs</span>
+        <span class="text-sm text-gray-600 dark:text-gray-400">View all API actions and changes</span>
+      </a>
+    </div>
+
+    {toast && (
+      <div class={`fixed bottom-8 right-8 px-6 py-4 rounded-lg text-white font-medium z-50 ${
+        toastType === 'error' ? 'bg-red-500' : 'bg-green-500'
+      }`}>
+        {toast}
+      </div>
+    )}
+  </div>
+</Base>
+
+<script>
+  document.getElementById('copyBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('apiKey') as HTMLInputElement;
+    navigator.clipboard.writeText(input.value);
+    const btn = document.getElementById('copyBtn');
+    if (btn) {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    }
+  });
+
+  document.getElementById('copyUrlBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('baseUrl') as HTMLInputElement;
+    navigator.clipboard.writeText(input.value);
+    const btn = document.getElementById('copyUrlBtn');
+    if (btn) {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
+    }
+  });
+</script>

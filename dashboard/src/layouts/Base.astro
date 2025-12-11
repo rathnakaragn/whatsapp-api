@@ -1,0 +1,57 @@
+---
+interface Props {
+  title: string;
+  connected?: boolean;
+}
+
+const { title, connected = false } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+  { href: '/', label: 'Inbox' },
+  { href: '/status', label: 'Status' },
+  { href: '/login', label: 'Login' },
+  { href: '/webhooks', label: 'Webhooks' },
+  { href: '/settings', label: 'Settings' },
+];
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} - WhatsApp Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-950">
+    <header class="bg-teal-700 dark:bg-gray-800 text-white px-4 md:px-8 py-4 sticky top-0 z-50">
+      <nav class="max-w-6xl mx-auto flex justify-between items-center">
+        <h1 class="text-lg font-semibold">WhatsApp Dashboard</h1>
+        <div class="flex items-center gap-4 md:gap-6 flex-wrap">
+          {navLinks.map(link => (
+            <a
+              href={link.href}
+              class={`hover:opacity-100 transition-opacity ${currentPath === link.href ? 'opacity-100' : 'opacity-80'}`}
+            >
+              {link.label}
+            </a>
+          ))}
+          <span class="text-xs opacity-80 flex items-center gap-2">
+            <span class={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-500'}`}></span>
+            {connected ? 'Connected' : 'Disconnected'}
+          </span>
+        </div>
+      </nav>
+    </header>
+    <main class="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full">
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+</style>

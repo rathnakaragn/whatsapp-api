@@ -1,0 +1,74 @@
+---
+import Base from '../layouts/Base.astro';
+import fs from 'fs';
+import { getIsConnected, getQrCodeData, getSessionPath } from '../lib/server';
+
+const isConnected = getIsConnected();
+const qrCodeData = getQrCodeData();
+const sessionPath = getSessionPath();
+const sessionExists = fs.existsSync(sessionPath);
+
+// Handle toast from redirect
+const toast = Astro.url.searchParams.get('toast');
+const toastType = Astro.url.searchParams.get('type') || 'success';
+---
+
+<Base title="Status" connected={isConnected}>
+  <div>
+    <h2 class="text-2xl font-semibold mb-6 dark:text-white">Connection Status</h2>
+
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-600 dark:text-gray-400">Status</span>
+        <span class={`font-semibold ${isConnected ? 'text-green-500' : 'text-red-500'}`}>
+          {isConnected ? 'Connected' : 'Disconnected'}
+        </span>
+      </div>
+
+      <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-600 dark:text-gray-400">QR Ready</span>
+        <span class="font-medium dark:text-white">{qrCodeData ? 'Yes' : 'No'}</span>
+      </div>
+
+      <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-600 dark:text-gray-400">Session Exists</span>
+        <span class="font-medium dark:text-white">{sessionExists ? 'Yes' : 'No'}</span>
+      </div>
+
+      <div class="flex gap-3 mt-6">
+        <a
+          href="/status"
+          class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        >
+          Refresh
+        </a>
+        {!isConnected ? (
+          <a
+            href="/login"
+            class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Connect WhatsApp
+          </a>
+        ) : (
+          <form method="POST" action="/actions/logout">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              onclick="return confirm('Are you sure you want to logout?')"
+            >
+              Logout
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+
+    {toast && (
+      <div class={`fixed bottom-8 right-8 px-6 py-4 rounded-lg text-white font-medium z-50 ${
+        toastType === 'error' ? 'bg-red-500' : 'bg-green-500'
+      }`}>
+        {toast}
+      </div>
+    )}
+  </div>
+</Base>
