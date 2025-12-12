@@ -104,6 +104,11 @@ const toastType = Astro.url.searchParams.get('type') || 'success';
               <td class="py-3 px-2">Get all messages</td>
             </tr>
             <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded text-xs font-semibold">GET</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/webhooks</td>
+              <td class="py-3 px-2">List configured webhooks</td>
+            </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
               <td class="py-3 px-2"><span class="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded text-xs font-semibold">POST</span></td>
               <td class="py-3 px-2 font-mono">/api/v1/messages/:id/reply</td>
               <td class="py-3 px-2">Reply to a message</td>
@@ -113,6 +118,11 @@ const toastType = Astro.url.searchParams.get('type') || 'success';
               <td class="py-3 px-2 font-mono">/api/v1/messages/:id/status</td>
               <td class="py-3 px-2">Update message status</td>
             </tr>
+            <tr class="border-b border-gray-100 dark:border-gray-700">
+              <td class="py-3 px-2"><span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 rounded text-xs font-semibold">PATCH</span></td>
+              <td class="py-3 px-2 font-mono">/api/v1/messages/batch/status</td>
+              <td class="py-3 px-2">Batch update message statuses</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -121,16 +131,49 @@ const toastType = Astro.url.searchParams.get('type') || 'success';
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
       <h3 class="text-lg font-semibold mb-4 dark:text-white">Example Usage</h3>
 
-      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-4 mb-2">Get unread messages</h4>
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-4 mb-2">1. Health Check (No Auth Required)</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl {apiBaseUrl}/health</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">2. Get Connection Status</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -H "X-API-Key: {apiKey}" \
+  {apiBaseUrl}/status</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">3. Get Unread Messages</h4>
       <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -H "X-API-Key: {apiKey}" \
   {apiBaseUrl}/inbox</pre>
 
-      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">Reply to a message</h4>
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">4. Get All Messages (With Pagination)</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -H "X-API-Key: {apiKey}" \
+  "{apiBaseUrl}/inbox/all?page=2&limit=10"</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">5. Search Messages (With Filters)</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -H "X-API-Key: {apiKey}" \
+  "{apiBaseUrl}/inbox/all?search=hello&phone=1234567890"</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">6. List Configured Webhooks</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -H "X-API-Key: {apiKey}" \
+  {apiBaseUrl}/webhooks</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">7. Reply to a Message</h4>
       <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -X POST \
   -H "X-API-Key: {apiKey}" \
   -H "Content-Type: application/json" \
   -d '{`{"message": "Hello!"}`}' \
   {apiBaseUrl}/messages/MESSAGE_ID/reply</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">8. Update Message Status</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -X PATCH \
+  -H "X-API-Key: {apiKey}" \
+  -H "Content-Type: application/json" \
+  -d '{`{"status": "read"}`}' \
+  {apiBaseUrl}/messages/MESSAGE_ID/status</pre>
+
+      <h4 class="text-sm font-semibold text-gray-600 dark:text-gray-400 mt-6 mb-2">9. Batch Update Message Statuses</h4>
+      <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">curl -X PATCH \
+  -H "X-API-Key: {apiKey}" \
+  -H "Content-Type: application/json" \
+  -d '{`{"ids": ["msg1", "msg2", "msg3"], "status": "read"}`}' \
+  {apiBaseUrl}/messages/batch/status</pre>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
