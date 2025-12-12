@@ -12,6 +12,9 @@ node_modules/
 # Session data (contains auth tokens!)
 session/
 
+# Media files
+media/
+
 # Logs
 *.log
 logs/
@@ -22,3 +25,16 @@ coverage/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*.swn
+*~
+.vscode/
+.idea/
+
+# Example/temp files
+waha_data/
+file.json
+n8nagent.json

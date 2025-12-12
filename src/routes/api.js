@@ -93,6 +93,19 @@ function createApiRoutes(database, auth) {
     }
   });
 
+  // Batch update status (must be before :id route to avoid matching)
+  router.patch("/messages/batch/status", auth, (req, res) => {
+    const { ids, status } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Missing or invalid ids array" });
+    }
+    if (!["unread", "read", "replied", "ignored", "sent"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+    const result = updateMessageStatusBatch(database, ids, status);
+    res.json({ success: true, updated: result.changes });
+  });
+
   // Update status
   router.patch("/messages/:id/status", auth, (req, res) => {
     const { status } = req.body;
@@ -104,19 +117,6 @@ function createApiRoutes(database, auth) {
       return res.status(404).json({ error: "Not found" });
     }
     res.json({ success: true });
-  });
-
-  // Batch update status
-  router.patch("/messages/batch/status", auth, (req, res) => {
-    const { ids, status } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: "Missing or invalid ids array" });
-    }
-    if (!["unread", "read", "replied", "ignored", "sent"].includes(status)) {
-      return res.status(400).json({ error: "Invalid status" });
-    }
-    const result = updateMessageStatusBatch(database, ids, status);
-    res.json({ success: true, updated: result.changes });
   });
 
   // List configured webhooks

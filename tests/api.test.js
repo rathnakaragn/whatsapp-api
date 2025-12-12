@@ -325,4 +325,182 @@ describe('API Endpoints', () => {
       expect(res.body.error).toBe('Not found');
     });
   });
+
+  describe('PATCH /api/v1/messages/batch/status', () => {
+    let messageIds;
+
+    beforeEach(() => {
+      messageIds = [uuidv4(), uuidv4(), uuidv4()];
+      messageIds.forEach(id => {
+        db.prepare('INSERT INTO messages (id, direction, phone, message) VALUES (?, ?, ?, ?)').run(id, 'incoming', 'phone1@s.whatsapp.net', 'Test message');
+      });
+    });
+
+    test('should update multiple messages status', async () => {
+      const res = await request(app)
+        .patch('/api/v1/messages/batch/status')
+        .set('X-API-Key', TEST_API_KEY)
+        .send({ ids: messageIds, status: 'read' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.updated).toBe(3);
+
+      messageIds.forEach(id => {
+        const msg = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
+        expect(msg.reply_status).toBe('read');
+      });
+    });
+
+    test('should return 400 when ids is missing', async () => {
+      const res = await request(app)
+        .patch('/api/v1/messages/batch/status')
+        .set('X-API-Key', TEST_API_KEY)
+        .send({ status: 'read' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Missing or invalid ids array');
+    });
+
+    test('should return 400 when ids is empty array', async () => {
+      const res = await request(app)
+        .patch('/api/v1/messages/batch/status')
+        .set('X-API-Key', TEST_API_KEY)
+        .send({ ids: [], status: 'read' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Missing or invalid ids array');
+    });
+
+    test('should return 400 for invalid status', async () => {
+      const res = await request(app)
+        .patch('/api/v1/messages/batch/status')
+        .set('X-API-Key', TEST_API_KEY)
+        .send({ ids: messageIds, status: 'invalid' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid status');
+    });
+  });
+
+  describe('GET /api/v1/webhooks', () => {
+    beforeEach(() => {
+      db.exec('DELETE FROM webhooks');
+    });
+
+    test('should return empty array when no webhooks configured', async () => {
+      const res = await request(app)
+        .get('/api/v1/webhooks')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.webhooks).toEqual([]);
+    });
+
+    test('should return configured webhooks', async () => {
+      db.prepare('INSERT INTO webhooks (url, events, secret, active) VALUES (?, ?, ?, ?)').run('https://example.com/webhook', 'message.received', 'secret123', 1);
+      db.prepare('INSERT INTO webhooks (url, events, secret, active) VALUES (?, ?, ?, ?)').run('https://example.com/webhook2', 'message.sent', null, 0);
+
+      const res = await request(app)
+        .get('/api/v1/webhooks')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.webhooks).toHaveLength(2);
+      expect(res.body.webhooks[0].url).toBe('https://example.com/webhook');
+      expect(res.body.webhooks[0].events).toBe('message.received');
+      expect(res.body.webhooks[0].active).toBe(1);
+    });
+  });
+
+  describe('GET /api/v1/inbox - Pagination', () => {
+    beforeEach(() => {
+      db.exec('DELETE FROM messages');
+      // Insert 10 test messages
+      for (let i = 1; i <= 10; i++) {
+        db.prepare('INSERT INTO messages (id, direction, phone, message) VALUES (?, ?, ?, ?)').run(`msg-${i}`, 'incoming', `phone${i}@s.whatsapp.net`, `Message ${i}`);
+      }
+    });
+
+    test('should return paginated results with default limit', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages.length).toBeLessThanOrEqual(50);
+      expect(res.body.pagination).toBeDefined();
+      expect(res.body.pagination.page).toBe(1);
+      expect(res.body.pagination.total).toBe(10);
+    });
+
+    test('should return second page when requested', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox?page=2&limit=5')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages).toHaveLength(5);
+      expect(res.body.pagination.page).toBe(2);
+      expect(res.body.pagination.limit).toBe(5);
+    });
+
+    test('should limit results per page', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox?limit=3')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages).toHaveLength(3);
+      expect(res.body.pagination.limit).toBe(3);
+    });
+
+    test('should enforce max limit of 100', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox?limit=200')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.pagination.limit).toBe(100);
+    });
+  });
+
+  describe('GET /api/v1/inbox - Filters', () => {
+    beforeEach(() => {
+      db.exec('DELETE FROM messages');
+      db.prepare('INSERT INTO messages (id, direction, phone, message) VALUES (?, ?, ?, ?)').run('msg-1', 'incoming', '1234567890@s.whatsapp.net', 'Hello world');
+      db.prepare('INSERT INTO messages (id, direction, phone, message) VALUES (?, ?, ?, ?)').run('msg-2', 'incoming', '9876543210@s.whatsapp.net', 'Test message');
+      db.prepare('INSERT INTO messages (id, direction, phone, message) VALUES (?, ?, ?, ?)').run('msg-3', 'incoming', '1234567890@s.whatsapp.net', 'Another test');
+    });
+
+    test('should filter by search term', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox?search=world')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages).toHaveLength(1);
+      expect(res.body.messages[0].message).toContain('world');
+    });
+
+    test('should filter by phone number', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox?phone=1234567890')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages).toHaveLength(2);
+      expect(res.body.messages[0].phone).toContain('1234567890');
+    });
+
+    test('should combine multiple filters', async () => {
+      const res = await request(app)
+        .get('/api/v1/inbox?phone=1234567890&search=Another')
+        .set('X-API-Key', TEST_API_KEY);
+
+      expect(res.status).toBe(200);
+      expect(res.body.messages).toHaveLength(1);
+      expect(res.body.messages[0].message).toBe('Another test');
+    });
+  });
 });

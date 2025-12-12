@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> 📖 **For detailed technical design, architecture decisions, and technology stack details, see [DESIGN.md](./DESIGN.md)**
+
 ## Project Overview
 
 Reply-only WhatsApp API built on the Baileys library. Receives WhatsApp messages, stores them in SQLite, and allows manual replies via REST API. Features an Astro SSR dashboard and versioned REST API.
@@ -145,7 +147,7 @@ settings (key, value)
 
 ## Testing
 
-74 tests in `tests/` directory using Jest and Supertest. Baileys is mocked for testing.
+87 tests in `tests/` directory using Jest and Supertest. Baileys is mocked for testing.
 
 ```bash
 npm test                # Run all tests
@@ -206,3 +208,124 @@ The dashboard uses Astro in SSR middleware mode, integrated with Express:
 3. Astro pages access state through `dashboard/src/lib/server.ts`
 4. All dashboard routes are protected by HTTP Basic Auth
 5. Form actions handle POST requests and redirect with toast messages
+
+---
+
+## Documentation
+
+This project has comprehensive documentation for different audiences:
+
+### 📋 **[PRD.md](./PRD.md)** - Product Requirements Document
+- **Audience:** Product Managers, Stakeholders, Business Analysts
+- **Purpose:** Business requirements, use cases, success metrics
+- **Contents:**
+  - Executive summary and problem statement
+  - Target users and personas
+  - 6 detailed use cases
+  - 10 functional requirements
+  - 7 non-functional requirements
+  - User stories organized by epic
+  - Feature prioritization (MUST/SHOULD/COULD/WON'T HAVE)
+  - Future enhancement roadmap
+
+### 🏗️ **[DESIGN.md](./DESIGN.md)** - Technical Design Document
+- **Audience:** Software Architects, Senior Developers
+- **Purpose:** High-level architecture and design decisions
+- **Contents:**
+  - System architecture diagrams
+  - Core component overview (what each does)
+  - Key design decisions with rationale and trade-offs
+  - Technology stack with "why" explanations
+  - Performance targets
+  - Scalability limitations
+  - Security model
+
+### 🔧 **[IMPLEMENTATION.md](./IMPLEMENTATION.md)** - Implementation Details
+- **Audience:** Engineers, Developers
+- **Purpose:** Technical implementation details and code examples
+- **Contents:**
+  - Complete database schema with SQL
+  - Component implementation with code examples
+  - Authentication and security implementation
+  - Rate limiting algorithm
+  - Webhook system implementation
+  - Astro SSR integration details
+  - Performance optimizations (indexes, prepared statements)
+  - Docker configuration
+  - Testing setup and mocks
+
+### 📖 **[API.md](./API.md)** - REST API Reference
+- **Audience:** Developers, Integration Engineers, Automation Engineers
+- **Purpose:** Complete API documentation with examples
+- **Contents:**
+  - Quick start guide (4 steps to get started)
+  - Authentication methods (X-API-Key, Basic Auth)
+  - Rate limiting details (100 req/min)
+  - All 7 API v1 endpoints with request/response examples
+  - Message object schema
+  - Webhook payloads for all 4 events
+  - Webhook signature verification (with code examples)
+  - Advanced workflows (automated reply bot, webhook integration)
+  - Troubleshooting guide
+  - Security best practices
+
+### 📝 **[CHANGELOG.md](./CHANGELOG.md)** - Version History
+- **Audience:** All users, DevOps, Product Managers
+- **Purpose:** Track changes between versions
+- **Contents:**
+  - Unreleased features (planned)
+  - Version 2.0.0 changes (Added, Changed, Fixed, Security, Deprecated)
+  - Version 1.0.0 initial release
+  - Version history summary table
+  - Upgrade guide (1.0.0 → 2.0.0)
+  - Release notes (What's new for users, developers, admins)
+  - Future migration path (v2.1, v2.2, v3.0)
+
+### 📚 **[README.md](./README.md)** - Getting Started
+- **Audience:** Everyone (first stop for new users)
+- **Purpose:** Quick setup and overview
+- **Contents:**
+  - Project description
+  - Docker and local development setup
+  - Configuration (environment variables)
+  - Authentication methods
+  - Quick workflow examples
+  - Dashboard pages overview
+  - Project structure
+
+### 🤖 **[CLAUDE.md](./CLAUDE.md)** - This File
+- **Audience:** Claude Code (AI assistant), New Developers
+- **Purpose:** Quick reference for development
+- **Contents:**
+  - Common commands (dev, test, Docker, PM2)
+  - Architecture overview (file structure)
+  - Core components summary
+  - API routes and dashboard routes
+  - Data flow (6-step message workflow)
+  - Database schema quick reference
+  - Environment variables table
+  - Links to detailed documentation
+
+---
+
+## Documentation Quick Reference
+
+**Need to know...** | **Read this...**
+---|---
+What features to build? | [PRD.md](./PRD.md)
+How is it architected? | [DESIGN.md](./DESIGN.md)
+How is it implemented? | [IMPLEMENTATION.md](./IMPLEMENTATION.md)
+How do I use the API? | [API.md](./API.md)
+What changed in this version? | [CHANGELOG.md](./CHANGELOG.md)
+How do I set it up? | [README.md](./README.md)
+Where is the code? | [CLAUDE.md](./CLAUDE.md)
+
+---
+
+## Next Steps After Setup
+
+1. **Read [README.md](./README.md)** - Get the system running
+2. **Scan QR code** - Visit `/login` in dashboard
+3. **Test API** - Try examples from [API.md](./API.md)
+4. **Review [PRD.md](./PRD.md)** - Understand use cases
+5. **Check [CHANGELOG.md](./CHANGELOG.md)** - Know what's new

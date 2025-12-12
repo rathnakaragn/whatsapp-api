@@ -45,7 +45,7 @@ services:
         max-file: "3"
     labels:
       - "com.whatsappapi.description=WhatsApp Reply-only API with Astro SSR Dashboard"
-      - "com.whatsappapi.version=1.0"
+      - "com.whatsappapi.version=2.0.0"
 
 volumes:
   whatsapp_session:
